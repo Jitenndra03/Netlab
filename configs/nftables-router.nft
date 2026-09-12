@@ -1,0 +1,37 @@
+#!/usr/sbin/nft -f
+# nftables-router.nft - baseline (known-good) firewall for the `router` node.
+#
+# Model: router is NOT doing NAT (both segments are routed, private
+# networks), it is purely filtering what is allowed to cross between the
+# front (client) segment and the back (server) segment.
+#
+# Policy: default DROP on forward, explicitly allow only:
+#   - already-established/related connections (so return traffic works)
+#   - NFS-related ports (rpcbind 111, nfsd 2049, mountd 20048) from front->back
+#   - ICMP echo (ping) both ways, useful for diagnostics
+#   - everything back->front is allowed (server-initiated traffic is not a
+#     lab concern here; a real deployment would tighten this further)
+
+table inet filter {
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+
+        # Stateful return traffic for connections already permitted below.
+        ct state established,related accept
+
+        # ICMP (ping) - useful for basic reachability testing in the lab.
+        icmp type echo-request accept
+        icmp type echo-reply accept
+
+        # NFS: rpcbind (111), nfsd (2049), mountd (20048), TCP and UDP,
+        # client-segment -> server-segment only.
+        ip saddr 10.10.10.0/24 ip daddr 10.10.20.0/24 tcp dport { 111, 2049, 20048 } accept
+        ip saddr 10.10.10.0/24 ip daddr 10.10.20.0/24 udp dport { 111, 2049, 20048 } accept
+
+        # Server segment initiating back to the client segment - allowed
+        # for simplicity in this lab (e.g. NFS callback / diagnostics).
+        ip saddr 10.10.20.0/24 ip daddr 10.10.10.0/24 accept
+
+        # Everything else crossing the router is denied by the policy above.
+    }
+}

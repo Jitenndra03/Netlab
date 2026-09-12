@@ -1,0 +1,23 @@
+# Reference only - NOT applied by the lab scripts (which use `ip` live so
+# break/fix stays fast and simple). This shows how you'd make the same
+# bond+bridge config survive a reboot on a real Ubuntu box via netplan.
+network:
+  version: 2
+  ethernets:
+    eth1: {}
+    eth2: {}
+  bonds:
+    bond0:
+      interfaces: [eth1, eth2]
+      parameters:
+        mode: active-backup
+        mii-monitor-interval: 100
+        primary: eth1
+  bridges:
+    br0:
+      interfaces: [bond0]
+      addresses: [10.10.20.10/24]
+      routes:
+        - to: 10.10.10.0/24
+          via: 10.10.20.1
+      mtu: 1500

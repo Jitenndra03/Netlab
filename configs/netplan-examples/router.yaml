@@ -1,0 +1,9 @@
+network:
+  version: 2
+  ethernets:
+    eth1:
+      addresses: [10.10.10.1/24]
+      mtu: 1500
+    eth2:
+      addresses: [10.10.20.1/24]
+      mtu: 1500
